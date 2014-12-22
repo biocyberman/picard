@@ -42,6 +42,7 @@ import java.util.Map;
 import java.util.Set;
 
 public class CommandLineParserTest {
+
     enum FrobnicationFlavor {
         FOO, BAR, BAZ
     }
@@ -783,7 +784,7 @@ public class CommandLineParserTest {
         @Option
         public String STRING2 = "String2ParentDefault";
 
-        @Option
+        @Option(overridable = true)
         public String STRING3 = "String3ParentDefault";
 
         @Option
@@ -918,7 +919,6 @@ public class CommandLineParserTest {
         @Option
         public int STRING1 = 1;
 
-
         @Option
         public List<String> COLLECTION;
 
@@ -934,5 +934,45 @@ public class CommandLineParserTest {
         clp.usage(System.out, false);
 
         clp.parseOptions(System.err, new String[0]);
+    }
+
+    class StaticParent {
+
+        @Option
+        public String STRING1 = "String1ParentDefault";
+
+        @Option
+        public String STRING2 = "String2ParentDefault";
+
+        @Option(overridable = true)
+        public String STRING3 = "String3ParentDefault";
+
+        public void doSomething(){
+            System.out.println(STRING3);
+        }
+
+    }
+
+    class OverridePropagation extends StaticParent {
+        @Option
+        public String STRING3 = "String3Overriden";
+    }
+
+    @Test
+    public void testOveriddenOptions(){
+        final OverridePropagation overridden = new OverridePropagation();
+        final CommandLineParser overrideClp = new CommandLineParser(overridden);
+
+        overrideClp.parseOptions(System.err, new String[0]);
+
+        final OverridePropagation props = (OverridePropagation) overrideClp.getCallerOptions();
+        Assert.assertTrue(props.STRING3.equals("String3Overriden"));
+        Assert.assertTrue(((StaticParent)props).STRING3.equals("String3Overriden"));
+
+        overrideClp.parseOptions(System.err, new String[]{"STRING3=String3Supplied"});
+
+        final OverridePropagation propsSet = (OverridePropagation) overrideClp.getCallerOptions();
+        Assert.assertTrue(propsSet.STRING3.equals("String3Supplied"));
+        Assert.assertTrue(((StaticParent)propsSet).STRING3.equals("String3Supplied"));
     }
 }
